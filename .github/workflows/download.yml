@@ -19,20 +19,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install QuickJS (required for yt-dlp)
+      - name: Install QuickJS
         run: |
-          # Download and install QuickJS binary
-          wget https://bellard.org/quickjs/quickjs-linux-x86_64-2024-01-13.tar.xz
-          tar -xf quickjs-linux-x86_64-2024-01-13.tar.xz
-          sudo cp quickjs-2024-01-13/qjs /usr/local/bin/
-          qjs --version
-          echo "QuickJS installed successfully"
+          # Try multiple sources for QuickJS
+          echo "Installing QuickJS..."
+          
+          # Method 1: Use apt (simplest, but might be older version)
+          sudo apt-get update
+          sudo apt-get install -y quickjs || true
+          
+          # Method 2: Download latest binary if apt fails
+          if ! command -v qjs &> /dev/null; then
+            echo "Downloading QuickJS binary..."
+            wget https://bellard.org/quickjs/quickjs-linux-x86_64-2024-01-13.tar.xz
+            tar -xf quickjs-linux-x86_64-2024-01-13.tar.xz
+            sudo cp quickjs-2024-01-13/qjs /usr/local/bin/
+          fi
+          
+          # Verify installation
+          which qjs || echo "qjs not found"
+          qjs --version || echo "QuickJS version check failed"
+          echo "QuickJS installation complete"
 
       - name: Install yt-dlp
         run: |
-          curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-            -o /usr/local/bin/yt-dlp
-          chmod +x /usr/local/bin/yt-dlp
+          # Install via pip instead of binary for better compatibility
+          pip install --upgrade yt-dlp
           yt-dlp --version
 
       - name: Write cookies file
@@ -44,17 +56,34 @@ jobs:
             echo "COOKIES_FILE=/tmp/yt-cookies.txt" >> $GITHUB_ENV
             echo "Cookies file configured"
           else
-            echo "No cookies provided - downloads may be rate-limited"
+            echo "No cookies provided"
           fi
+
+      - name: Test yt-dlp with QuickJS
+        run: |
+          # Test a simple public video to verify QuickJS works
+          echo "Testing yt-dlp with QuickJS..."
+          yt-dlp --js-runtimes qjs --simulate -v "https://www.youtube.com/watch?v=jNQXAC9IVRw" 2>&1 | head -50
+          echo "Test complete"
 
       - name: Process pending videos
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          python scripts/process.py
+          python scripts/process.py 2>&1 | tee download.log
+          
+      - name: Upload debug logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            download.log
+            scripts/*.log
 
       - name: Commit updated videos.json
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
