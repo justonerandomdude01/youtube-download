@@ -29,29 +29,61 @@ jobs:
           pip install --upgrade yt-dlp
           yt-dlp --version
 
-      - name: Write cookies file
+      - name: Write cookies file (Clean version without comments)
         env:
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
           if [ -n "$YOUTUBE_COOKIES" ]; then
-            echo "$YOUTUBE_COOKIES" > /tmp/yt-cookies.txt
+            # Remove comments and empty lines, save clean cookies
+            echo "$YOUTUBE_COOKIES" | grep -v '^#' | grep -v '^$' > /tmp/yt-cookies.txt
             echo "COOKIES_FILE=/tmp/yt-cookies.txt" >> $GITHUB_ENV
-            echo "✓ Cookies file configured"
+          
+            COOKIE_LINES=$(wc -l < /tmp/yt-cookies.txt)
+            echo "✓ Cookies configured ($COOKIE_LINES lines)"
+          
+            # Verify critical cookies exist
+            if grep -q "LOGIN_INFO" /tmp/yt-cookies.txt; then
+              echo "✓ LOGIN_INFO cookie found (authenticated)"
+            else
+              echo "⚠ WARNING: No LOGIN_INFO cookie - may not be authenticated"
+            fi
+          
+            if grep -q "VISITOR_INFO1_LIVE" /tmp/yt-cookies.txt; then
+              echo "✓ VISITOR_INFO1_LIVE cookie found"
+            fi
+          
+            # Show first 3 non-comment lines for debugging (without exposing sensitive values)
+            echo "Cookie domains found:"
+            grep -o '^[^\t]*' /tmp/yt-cookies.txt | head -5 | sed 's/.*/  - &/'
           else
-            echo "⚠ No cookies provided - downloads may be rate-limited"
+            echo "⚠ No cookies provided - downloads may be rate-limited or fail"
           fi
 
-      - name: Test yt-dlp configuration
+      - name: Test yt-dlp with cookies and Deno
         run: |
-          echo "Testing yt-dlp with Deno and remote EJS components..."
-          yt-dlp --js-runtimes deno --remote-components ejs:npm --simulate \
-            "https://www.youtube.com/watch?v=jNQXAC9IVRw" 2>&1 | tee test.log
+          echo "Testing yt-dlp configuration with a public video..."
           
-          if grep -q "n challenge" test.log; then
-            echo "❌ Challenge solving failed"
-            exit 1
+          if [ -f "$COOKIES_FILE" ]; then
+            echo "Using cookies from: $COOKIES_FILE"
+            yt-dlp --cookies "$COOKIES_FILE" \
+              --js-runtimes deno \
+              --remote-components ejs:npm \
+              --extractor-args "youtube:player_client=web" \
+              --simulate \
+              "https://www.youtube.com/watch?v=jNQXAC9IVRw" 2>&1 | tee test.log
+          
+            if grep -q "Sign in to confirm" test.log; then
+              echo "❌ Cookie authentication failed - cookies may be expired"
+              exit 1
+            elif grep -q "n challenge" test.log; then
+              echo "❌ JavaScript challenge failed"
+              exit 1
+            else
+              echo "✅ Test successful - cookies working"
+            fi
+          else
+            echo "⚠ No cookies file to test"
           fi
-          echo "✓ Test successful"
 
       - name: Process pending videos
         env:
