@@ -1,21 +1,21 @@
 [
   {
     "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "status": "pending",
+    "status": "failed",
     "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
     "release_tag": "yt-dQw4w9WgXcQ.f398",
     "release_url": "https://github.com/alihamzhei/youtube-download/releases/tag/yt-dQw4w9WgXcQ.f398",
-    "error": "",
+    "error": "NG: [youtube] dQw4w9WgXcQ: n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed. Review any warnings presented before this message. For more details, refer to  https://github.com/yt-dlp/yt-dlp/wiki/EJS\nWARNING: Only images are available for download. use --list-formats to see them\nERROR: [youtube] dQw4w9WgXcQ: Requested format is not available. Use --list-formats for a list of available formats",
     "added_at": "2026-05-03",
     "downloaded_at": "2026-05-03"
   },
   {
     "url": "https://www.youtube.com/watch?v=C4thl7r2MB4",
-    "status": "pending",
+    "status": "failed",
     "title": null,
     "release_tag": null,
     "release_url": null,
-    "error": "",
+    "error": "NG: [youtube] C4thl7r2MB4: n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed. Review any warnings presented before this message. For more details, refer to  https://github.com/yt-dlp/yt-dlp/wiki/EJS\nWARNING: Only images are available for download. use --list-formats to see them\nERROR: [youtube] C4thl7r2MB4: Requested format is not available. Use --list-formats for a list of available formats",
     "added_at": "2026-05-03",
     "downloaded_at": null
   }
